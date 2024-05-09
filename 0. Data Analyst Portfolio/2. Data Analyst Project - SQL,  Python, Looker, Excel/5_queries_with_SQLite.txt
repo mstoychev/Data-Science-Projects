@@ -1,0 +1,113 @@
+
+1. How many States were represented in the race?
+
+SELECT count(DISTINCT state) as distint_states
+FROM marathon;
+
+→ 23
+
+----------------------------------------------------------------------------------------------------------
+
+2. What was the average time of Men vs Woman? (Format with 2 decimals)
+
+SELECT gender, ROUND(AVG(total_minutes), 2) AS average_time
+FROM marathon 
+GROUP BY gender;
+
+→ F	780.44
+→ M	756.5
+
+----------------------------------------------------------------------------------------------------------
+
+3. What were the oldest and the youngest ages in the race?
+
+SELECT MIN(age) as min_age, MAX(age) as max_age
+FROM marathon;
+
+→ min_age  max_age
+→ 22	   63
+
+----------------------------------------------------------------------------------------------------------
+
+4. What were the oldest and the youngest ages by sex in the race?
+
+SELECT gender, MIN(age) as min_age, MAX(age) as max_age
+FROM marathon
+GROUP BY gender;
+
+→ gender  min_age  max_age
+→ F	  27	   60
+→ M	  22	   63
+
+----------------------------------------------------------------------------------------------------------
+
+5. What was the average time for each age group grouped by gender? (grouping by decades)
+
+SELECT gender,
+    CASE
+        WHEN age >= 10 AND age < 20 THEN '10-19'
+        WHEN age >= 20 AND age < 30 THEN '20-29'
+        WHEN age >= 30 AND age < 40 THEN '30-39'
+        WHEN age >= 40 AND age < 50 THEN '40-49'
+        WHEN age >= 50 AND age < 60 THEN '50-59'
+        WHEN age >= 60 AND age < 70 THEN '60-69'
+        ELSE '70+'
+    END AS age_group, ROUND(AVG(total_minutes), 2) AS average_time
+FROM marathon
+GROUP BY gender, age_group
+ORDER BY gender, age_group;
+
+→ gender age_group  average_time
+→ F	 20-29	    706.57
+→ F	 30-39	    773.11
+→ F	 40-49	    762.74
+→ F	 50-59	    905.28
+→ F	 60-69	    806.18
+→ M	 20-29	    799.2
+→ M	 30-39	    743.97
+→ M	 40-49	    726.23
+→ M	 50-59	    794.66
+→ M	 60-69	    842.44
+
+----------------------------------------------------------------------------------------------------------
+
+6. Top 3 male and female athlete?
+
+WITH ranked_marathon AS (
+    SELECT 
+        gender,
+        place,
+        name,
+        ROW_NUMBER() OVER (PARTITION BY gender ORDER BY place) AS gender_rank,
+        ROW_NUMBER() OVER (ORDER BY place) AS overall_rank
+    FROM 
+        marathon
+)
+SELECT 
+    gender,
+    overall_rank,
+    gender_rank,
+    name
+FROM 
+    ranked_marathon
+WHERE 
+    gender_rank <= 3
+ORDER BY 
+    gender, 
+    gender_rank;
+
+gender overall_rank  gender_rank  name
+→ F	8	     1	          Elizabeth Myers
+→ F	11	     2	          Heidi Hinnershitz
+→ F	17	     3	          Julie Rosa Kenney
+→ M	1	     1	          Daniel Wilson
+→ M	2	     2	          Eric Davis
+→ M	3	     3	          Stewart Edwards
+
+----------------------------------------------------------------------------------------------------------
+
+7. Create a temporal view of a simplified data and then export it to Looker for creating a dashboard
+
+CREATE TEMP VIEW marathon_simplified AS
+SELECT place, name, time, total_minutes, city, state, age, gender, latlong
+from marathon;
